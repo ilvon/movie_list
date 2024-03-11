@@ -4,7 +4,6 @@ import pandas as pd
 
 class get_movie_info():
     def __init__(self, access_token, language):
-        load_dotenv()
         self.access_token = access_token
         self.headers = {
             "accept": "application/json",
@@ -84,6 +83,8 @@ def generate_html_table(filmlist_filepath, db_lang):
     with open(filmlist_filepath, 'r', encoding='utf-8') as f:
         filmlist = f.read().splitlines()  
         
+    BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+    load_dotenv(os.path.join(BASE_DIR, '.env'))
     tmdb = get_movie_info(access_token=os.getenv("TMDB_ACCESS_TOKEN"), language=db_lang)
 
     for i, film in enumerate(filmlist):
