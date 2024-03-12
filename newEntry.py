@@ -1,5 +1,6 @@
 import requests, opencc, os
 from dotenv import load_dotenv
+from lxml import etree
 
 class get_movie_info():
     def __init__(self, access_token, language):
@@ -81,25 +82,45 @@ def print_html_table(film_search_str, db_lang): # film_search_str = [entry #, di
     name, poster, year, desc, genre, runtime, imdburl, tmdburl = tmdb.get_movie_full_detail(film)
     
     db_name = f'<a href="{imdburl}">{film_search_element[1]}</a>' if imdburl else film_search_element[1]
-    db_poster = f'<img src="{poster}" alt="{name}" width="100">' if poster else ''
+    db_poster = f'<img src="{poster}" alt="{name}" width="100"/>' if poster else ''
     db_year = year if year else ''
     db_overview = desc if desc else ''
     db_genres = '<br/>'.join(genre) if (genre != None and len(genre) > 0) else ''
     db_runtime = runtime if runtime else ''
     db_exturl = f'<a href="{tmdburl}">TMDB</a>' if tmdburl else 'TMDB'
     
-    print('')
-    # print('<tr>')
-    print(f"\t<th>{film_search_element[0]}</th>")
-    print(f'\t<td>{db_name}</td>')
-    print(f'\t<td>{db_poster}</td>')
-    print(f'\t<td>{db_year}</td>')
-    print(f'\t<td>{db_overview}</td>')
-    print(f'\t<td>{db_genres}</td>')
-    print(f'\t<td>{db_runtime}</td>')
-    print(f'\t<td>{db_exturl}</td>')
-    # print('</tr>')
-        
+    
+    formatted_info = f'''
+    <tr>
+        <th>{film_search_element[0]}</th>
+        <td>{db_name}</td>
+        <td>{db_poster}</td>
+        <td>{db_year}</td>
+        <td>{db_overview}</td>
+        <td>{db_genres}</td>
+        <td>{db_runtime}</td>
+        <td>{db_exturl}</td>
+    </tr>
+    '''
+    insert_new_entry(int(film_search_element[0]), formatted_info)
+
+def insert_new_entry(entry_idx, raw_new_entry):
+    with open('./src/index.html', 'r', encoding='utf-8') as fin:
+        rawhtml = fin.read()
+    
+    root = etree.HTML(rawhtml)
+    new_entry = etree.fromstring(raw_new_entry)
+
+    tbody = root.xpath('.//tbody')[0]
+    all_entries = tbody.xpath('.//tr')
+
+    tbody.insert(entry_idx, new_entry)
+    
+    for idx, entry in enumerate(all_entries[entry_idx:]):
+        entry.xpath('.//th')[0].text = str(idx + entry_idx + 1)
+    
+    with open('./src/index.html', 'wb') as fout:
+        fout.write(etree.tostring(root, encoding='utf-8'))
 
 if __name__ == '__main__':
     search_string = input('String(#, displayName, searchName): ')
