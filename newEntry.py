@@ -1,6 +1,7 @@
 import requests, opencc, os
 from dotenv import load_dotenv
 from lxml import etree
+from datetime import date
 
 class get_movie_info():
     def __init__(self, access_token, language):
@@ -116,6 +117,10 @@ def insert_new_entry(entry_idx, raw_new_entry):
 
     tbody.insert(entry_idx, new_entry)
     
+    div_info_text = root.xpath('./body/div[@class="container"]/h4')
+    div_info_text[0].text = f"Last Update: {date.today().strftime('%d-%m-%Y')}"
+    div_info_text[1].text = f"Total Entries: {len(root.xpath('.//tbody/tr'))}"
+
     for idx, entry in enumerate(all_entries[entry_idx:]):
         entry.xpath('.//th')[0].text = str(idx + entry_idx + 1)
     
