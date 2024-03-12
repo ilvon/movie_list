@@ -1,3 +1,9 @@
 tbody td {
     text-align: center;
 }
+
+.container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
