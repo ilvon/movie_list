@@ -80,7 +80,10 @@ def print_html_table(film_search_str, db_lang): # film_search_str = [entry #, di
     tmdb = get_movie_info(access_token=os.getenv("TMDB_ACCESS_TOKEN"), language=db_lang)
 
     film = film_search_element[2]
-    name, poster, year, desc, genre, runtime, imdburl, tmdburl = tmdb.get_movie_full_detail(film)
+    if film.startswith('mid='):
+        name, poster, year, desc, genre, runtime, imdburl, tmdburl = tmdb.get_attr(film[4:])
+    else:
+        name, poster, year, desc, genre, runtime, imdburl, tmdburl = tmdb.get_movie_full_detail(film)
     
     db_name = f'<a href="{imdburl}">{film_search_element[1]}</a>' if imdburl else film_search_element[1]
     db_poster = f'<img src="{poster}" alt="{name}" width="100"/>' if poster else ''
@@ -103,7 +106,12 @@ def print_html_table(film_search_str, db_lang): # film_search_str = [entry #, di
         <td>{db_exturl}</td>
     </tr>
     '''
-    insert_new_entry(int(film_search_element[0]), formatted_info)
+    
+    edit_html_file = input('Edit the html file directly? (Y/Any key): ')
+    if edit_html_file == 'Y' or edit_html_file == 'y':
+        insert_new_entry(int(film_search_element[0]), formatted_info)
+    else:
+        print(formatted_info)
 
 def insert_new_entry(entry_idx, raw_new_entry):
     with open('./src/index.html', 'r', encoding='utf-8') as fin:
