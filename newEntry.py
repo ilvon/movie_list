@@ -71,7 +71,7 @@ class get_movie_info():
         return converter.convert(text)
 
 
-def print_html_table(film_search_str, db_lang): # film_search_str = [entry #, display name, tmdb search name]
+def print_html_table(film_search_str, db_lang): # film_search_str = [display name, tmdb search name]
     film_search_element = film_search_str.split(',')
     
     BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -79,13 +79,13 @@ def print_html_table(film_search_str, db_lang): # film_search_str = [entry #, di
        
     tmdb = get_movie_info(access_token=os.getenv("TMDB_ACCESS_TOKEN"), language=db_lang)
 
-    film = film_search_element[2]
+    film = film_search_element[1]
     if film.startswith('mid='):
         name, poster, year, desc, genre, runtime, imdburl, tmdburl = tmdb.get_attr(film[4:])
     else:
         name, poster, year, desc, genre, runtime, imdburl, tmdburl = tmdb.get_movie_full_detail(film)
     
-    db_name = f'<a href="{imdburl}">{film_search_element[1]}</a>' if imdburl else film_search_element[1]
+    db_name = f'<a href="{imdburl}">{film_search_element[0]}</a>' if imdburl else film_search_element[0]
     db_poster = f'<img src="{poster}" alt="{name}" width="100"/>' if poster else ''
     db_year = year if year else ''
     db_overview = desc if desc else ''
@@ -93,10 +93,9 @@ def print_html_table(film_search_str, db_lang): # film_search_str = [entry #, di
     db_runtime = runtime if runtime else ''
     db_exturl = f'<a href="{tmdburl}">TMDB</a>' if tmdburl else 'TMDB'
     
-    
     formatted_info = f'''
     <tr>
-        <th>{film_search_element[0]}</th>
+        <th>0</th>
         <td>{db_name}</td>
         <td>{db_poster}</td>
         <td>{db_year}</td>
@@ -109,11 +108,13 @@ def print_html_table(film_search_str, db_lang): # film_search_str = [entry #, di
     
     edit_html_file = input('Edit the html file directly? (Y/Any key): ')
     if edit_html_file == 'Y' or edit_html_file == 'y':
-        insert_new_entry(int(film_search_element[0]), formatted_info)
+        result_index = insert_new_entry(film_search_element[0], formatted_info)
+        print(f'Inserted entry: #{result_index} {film}')
     else:
         print(formatted_info)
 
-def insert_new_entry(entry_idx, raw_new_entry):
+
+def insert_new_entry(displayName, raw_new_entry):
     with open('./src/index.html', 'r', encoding='utf-8') as fin:
         rawhtml = fin.read()
     
@@ -121,20 +122,28 @@ def insert_new_entry(entry_idx, raw_new_entry):
     new_entry = etree.fromstring(raw_new_entry)
 
     tbody = root.xpath('.//tbody')[0]
-    all_entries = tbody.xpath('.//tr')
 
-    tbody.insert(entry_idx, new_entry)
+    tbody.append(new_entry)
+
+    entries_unsorted = root.xpath('.//tbody/tr')
+    entries_sorted = sorted(entries_unsorted, key=lambda r: r.xpath(".//a[contains(@href, 'imdb')]/text()"))
+    tbody.clear()
     
+    for i, row in enumerate(entries_sorted):
+        row.xpath('.//th')[0].text = str(i)
+        tbody.append(row)
+
     div_info_text = root.xpath('./body/div[@class="container"]/h4')
     div_info_text[0].text = f"Last Update: {date.today().strftime('%d-%m-%Y')}"
     div_info_text[1].text = f"Total Entries: {len(root.xpath('.//tbody/tr'))}"
-
-    for idx, entry in enumerate(all_entries[entry_idx:]):
-        entry.xpath('.//th')[0].text = str(idx + entry_idx + 1)
     
     with open('./src/index.html', 'wb') as fout:
         fout.write(etree.tostring(root, encoding='utf-8'))
+    
+    newEntry_location = tbody.xpath(f"./tr[contains(.//a/text(), '{displayName}')]")[0]
+    return newEntry_location.find('./th').text
+
 
 if __name__ == '__main__':
-    search_string = input('String(#, displayName, searchName): ')
+    search_string = input('String(DisplayName, SearchName(or TMDB id startwith \'mid=\')): ')
     print_html_table(search_string, 'zh-TW')
