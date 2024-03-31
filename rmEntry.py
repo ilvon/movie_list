@@ -1,5 +1,23 @@
 from lxml import etree
 from datetime import date
+import re
+
+def update_Latest_Entry_header(idx, h4Tag):
+    hyperlinked = h4Tag.find('.//a')
+    header = h4Tag.find('.//a').text
+    if header == '---':
+        return h4Tag
+    
+    info = re.findall(r'#(\d+) (.*)', header)[0]   #(idx, name)
+    if int(info[0]) > idx:
+        hyperlinked.attrib['href'] = f'index.html#{int(info[0]) - 1}'
+        hyperlinked.text = f'#{int(info[0]) - 1} {info[1]}'
+    elif int(info[0]) == idx:
+        hyperlinked.attrib['href'] = 'index.html'   
+        hyperlinked.text = '---'
+    
+    return h4Tag
+
 
 def remove_Entry(index: int):
     with open('./src/index.html', 'r', encoding='utf-8') as fsrc:
@@ -15,6 +33,7 @@ def remove_Entry(index: int):
     
     div_info_text = root.xpath('./body/div[@class="container"]/h4')
     div_info_text[0].text = f"Last Update: {date.today().strftime('%d-%m-%Y')}"
+    div_info_text[1] = update_Latest_Entry_header(index, div_info_text[1])
     div_info_text[2].text = f"Total Entries: {len(root.xpath('.//tbody/tr'))}"
     
     for i, row in enumerate(root.xpath('.//tbody/tr')[index:]):
